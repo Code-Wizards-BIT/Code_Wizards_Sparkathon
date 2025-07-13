@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Clock, Cloud, MessageSquare, RefreshCw, X, Calendar } from "lucide-react"
+import { Clock, Calendar, MessageSquare, RefreshCw, X, TrendingDown, Percent, AlertTriangle } from "lucide-react"
 
 // Static heatmap data that won't change - generated once per product
 const generateStaticHeatmapData = (productId: string) => {
@@ -83,29 +83,6 @@ const generateStaticHeatmapData = (productId: string) => {
       // Apply weekend boost
       baseValue *= weekendMultiplier
 
-      // Add weather sensitivity for certain products
-      if (pattern.weatherSensitive) {
-        if (productId === "ice-cream") {
-          // Ice cream has higher demand on hot days (simulated)
-          if (dayIndex === 2 || dayIndex === 5 || dayIndex === 6) {
-            // Wed, Sat, Sun are "hot days"
-            baseValue *= 1.3
-          }
-        } else if (productId === "umbrella") {
-          // Umbrella has spikes on rainy days
-          if (dayIndex === 4) {
-            // Friday is "rainy day"
-            baseValue *= 3.0
-          }
-        } else if (productId.includes("soup")) {
-          // Soup has higher demand on cold days
-          if (dayIndex === 1 || dayIndex === 4) {
-            // Tue, Fri are "cold days"
-            baseValue *= 1.4
-          }
-        }
-      }
-
       // Add some consistent variation but keep it deterministic
       baseValue += (seededRandom(randomIndex + 500) - 0.5) * 0.1
 
@@ -116,6 +93,62 @@ const generateStaticHeatmapData = (productId: string) => {
         sales: isFuture ? [] : generateMockSales(baseValue, cellDate, productId),
       }
     })
+  })
+}
+
+// Generate seasonal heatmap data for 12 months
+const generateSeasonalHeatmapData = (productId: string) => {
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+  // Create a seed based on productId for consistent data
+  const seed = productId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
+
+  const seededRandom = (index: number) => {
+    const x = Math.sin(seed + index) * 10000
+    return x - Math.floor(x)
+  }
+
+  // Define seasonal patterns for different product types
+  const seasonalPatterns: Record<string, { peakMonths: number[]; lowMonths: number[]; baseMultiplier: number }> = {
+    "ice-cream": { peakMonths: [5, 6, 7, 8], lowMonths: [11, 0, 1, 2], baseMultiplier: 1.0 },
+    "soup-cans": { peakMonths: [10, 11, 0, 1, 2], lowMonths: [5, 6, 7, 8], baseMultiplier: 0.8 },
+    umbrella: { peakMonths: [3, 4, 9, 10], lowMonths: [6, 7, 11, 0], baseMultiplier: 0.6 },
+    "coffee-beans": { peakMonths: [10, 11, 0, 1], lowMonths: [6, 7, 8], baseMultiplier: 1.2 },
+    bananas: { peakMonths: [0, 1, 2, 9, 10, 11], lowMonths: [5, 6, 7], baseMultiplier: 1.1 },
+    "chicken-breast": { peakMonths: [4, 5, 6, 10, 11], lowMonths: [1, 2, 8], baseMultiplier: 1.0 },
+    "apples-red": { peakMonths: [8, 9, 10, 11], lowMonths: [3, 4, 5, 6], baseMultiplier: 0.9 },
+    tomatoes: { peakMonths: [5, 6, 7, 8], lowMonths: [11, 0, 1, 2], baseMultiplier: 1.0 },
+    "salmon-fillet": { peakMonths: [11, 0, 3, 4], lowMonths: [6, 7, 8], baseMultiplier: 1.1 },
+    "potato-chips": { peakMonths: [6, 7, 11, 0], lowMonths: [2, 3, 9], baseMultiplier: 1.0 },
+  }
+
+  const pattern = seasonalPatterns[productId] || {
+    peakMonths: [11, 0, 5, 6],
+    lowMonths: [2, 3, 8, 9],
+    baseMultiplier: 1.0,
+  }
+
+  return months.map((month, monthIndex) => {
+    let baseValue = pattern.baseMultiplier * 0.5
+
+    if (pattern.peakMonths.includes(monthIndex)) {
+      baseValue = pattern.baseMultiplier * (0.8 + seededRandom(monthIndex) * 0.2) // High demand
+    } else if (pattern.lowMonths.includes(monthIndex)) {
+      baseValue = pattern.baseMultiplier * (0.2 + seededRandom(monthIndex + 12) * 0.2) // Low demand
+    } else {
+      baseValue = pattern.baseMultiplier * (0.4 + seededRandom(monthIndex + 24) * 0.3) // Medium demand
+    }
+
+    // Add some variation
+    baseValue += (seededRandom(monthIndex + 36) - 0.5) * 0.1
+
+    return {
+      month,
+      monthIndex,
+      value: Math.max(0.1, Math.min(1, baseValue)),
+      sales: Math.floor(baseValue * 1000 + seededRandom(monthIndex + 48) * 500),
+      revenue: Math.floor(baseValue * 50000 + seededRandom(monthIndex + 60) * 25000),
+    }
   })
 }
 
@@ -140,6 +173,89 @@ const generateMockSales = (intensity: number, date: Date, productId: string) => 
   }
 
   return sales
+}
+
+// Generate AI-powered sale suggestions
+const generateSaleSuggestions = (productId: string) => {
+  const productName = getProductName(productId)
+
+  // AI analysis based on product characteristics
+  const suggestions: Record<string, any> = {
+    "ice-cream": {
+      reason: "Winter season approaching - ice cream demand drops 60% in cold months",
+      currentStock: 245,
+      optimalStock: 120,
+      overstockRisk: "High",
+      suggestedDiscount: 25,
+      timeframe: "2 weeks",
+      aiConfidence: 92,
+      strategy: "Bundle with hot beverages, promote as comfort food",
+    },
+    "soup-cans": {
+      reason: "Summer season - soup demand decreases 40% in hot weather",
+      currentStock: 180,
+      optimalStock: 100,
+      overstockRisk: "Medium",
+      suggestedDiscount: 15,
+      timeframe: "3 weeks",
+      aiConfidence: 87,
+      strategy: "Market as quick meal solution, bundle with bread",
+    },
+    umbrella: {
+      reason: "Dry season forecast - 70% less rain expected next month",
+      currentStock: 95,
+      optimalStock: 30,
+      overstockRisk: "Very High",
+      suggestedDiscount: 35,
+      timeframe: "1 week",
+      aiConfidence: 95,
+      strategy: "Emergency clearance, bundle with travel accessories",
+    },
+    "apples-red": {
+      reason: "New harvest season - fresh supply will reduce demand for current stock",
+      currentStock: 320,
+      optimalStock: 200,
+      overstockRisk: "Medium",
+      suggestedDiscount: 20,
+      timeframe: "10 days",
+      aiConfidence: 89,
+      strategy: "Promote for baking, bundle with cinnamon and pie crusts",
+    },
+    "salmon-fillet": {
+      reason: "Post-holiday period - premium seafood demand drops 45%",
+      currentStock: 85,
+      optimalStock: 45,
+      overstockRisk: "High",
+      suggestedDiscount: 30,
+      timeframe: "5 days",
+      aiConfidence: 91,
+      strategy: "Target health-conscious customers, promote omega-3 benefits",
+    },
+    "potato-chips": {
+      reason: "Post-holiday snacking decline - 30% demand drop after festivities",
+      currentStock: 450,
+      optimalStock: 300,
+      overstockRisk: "Medium",
+      suggestedDiscount: 18,
+      timeframe: "2 weeks",
+      aiConfidence: 84,
+      strategy: "Office lunch promotions, bulk discounts for families",
+    },
+  }
+
+  // Default suggestion for products not specifically defined
+  const defaultSuggestion = {
+    reason: "Seasonal demand pattern analysis indicates potential overstock risk",
+    currentStock: Math.floor(Math.random() * 200 + 100),
+    optimalStock: Math.floor(Math.random() * 100 + 50),
+    overstockRisk: ["Low", "Medium", "High"][Math.floor(Math.random() * 3)],
+    suggestedDiscount: Math.floor(Math.random() * 20 + 10),
+    timeframe: ["1 week", "2 weeks", "3 weeks"][Math.floor(Math.random() * 3)],
+    aiConfidence: Math.floor(Math.random() * 15 + 80),
+    strategy: "Implement targeted promotions and strategic bundling",
+  }
+
+  return suggestions[productId] || defaultSuggestion
 }
 
 const getProductName = (productId: string) => {
@@ -170,6 +286,7 @@ const getProductName = (productId: string) => {
 
 // Cache the heatmap data to prevent regeneration
 const heatmapCache: Record<string, any[][]> = {}
+const seasonalCache: Record<string, any[]> = {}
 
 const getHeatmapData = (productId: string) => {
   if (!heatmapCache[productId]) {
@@ -178,9 +295,24 @@ const getHeatmapData = (productId: string) => {
   return heatmapCache[productId]
 }
 
+const getSeasonalData = (productId: string) => {
+  if (!seasonalCache[productId]) {
+    seasonalCache[productId] = generateSeasonalHeatmapData(productId)
+  }
+  return seasonalCache[productId]
+}
+
 const getIntensityColor = (value: number, isFuture: boolean) => {
   if (isFuture) return "bg-gray-200"
 
+  if (value >= 0.8) return "bg-red-500"
+  if (value >= 0.6) return "bg-red-400"
+  if (value >= 0.4) return "bg-yellow-400"
+  if (value >= 0.2) return "bg-green-400"
+  return "bg-gray-200"
+}
+
+const getSeasonalIntensityColor = (value: number) => {
   if (value >= 0.8) return "bg-red-500"
   if (value >= 0.6) return "bg-red-400"
   if (value >= 0.4) return "bg-yellow-400"
@@ -194,6 +326,21 @@ const getIntensityLabel = (value: number) => {
   if (value >= 0.4) return "Medium"
   if (value >= 0.2) return "Low"
   return "Very Low"
+}
+
+const getRiskColor = (risk: string) => {
+  switch (risk) {
+    case "Very High":
+      return "bg-red-100 text-red-800 border-red-200"
+    case "High":
+      return "bg-orange-100 text-orange-800 border-orange-200"
+    case "Medium":
+      return "bg-yellow-100 text-yellow-800 border-yellow-200"
+    case "Low":
+      return "bg-green-100 text-green-800 border-green-200"
+    default:
+      return "bg-gray-100 text-gray-800 border-gray-200"
+  }
 }
 
 interface CellDetails {
@@ -214,21 +361,15 @@ export function ProductHeatmap({ productId }: { productId: string }) {
   const [selectedView, setSelectedView] = useState("weekly")
   const [hoveredCell, setHoveredCell] = useState<{ day: number; hour: number; value: number } | null>(null)
   const [selectedCell, setSelectedCell] = useState<CellDetails | null>(null)
+  const [hoveredMonth, setHoveredMonth] = useState<number | null>(null)
 
   // Use cached/static heatmap data
   const heatmapData = getHeatmapData(productId)
+  const seasonalData = getSeasonalData(productId)
+  const saleSuggestion = generateSaleSuggestions(productId)
+
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
   const hours = Array.from({ length: 24 }, (_, i) => i) // 0-23 (24 hours)
-
-  const weatherData = [
-    { day: "Mon", temp: 72, condition: "Sunny", impact: "Medium" },
-    { day: "Tue", temp: 68, condition: "Cloudy", impact: "Low" },
-    { day: "Wed", temp: 85, condition: "Hot", impact: "High" },
-    { day: "Thu", temp: 78, condition: "Sunny", impact: "Medium" },
-    { day: "Fri", temp: 65, condition: "Rainy", impact: "High" },
-    { day: "Sat", temp: 88, condition: "Very Hot", impact: "Very High" },
-    { day: "Sun", temp: 82, condition: "Sunny", impact: "High" },
-  ]
 
   const sentimentData = [
     { source: "Twitter", mentions: 1247, sentiment: 0.82, trend: "up" },
@@ -236,23 +377,22 @@ export function ProductHeatmap({ productId }: { productId: string }) {
     { source: "Reviews", mentions: 89, sentiment: 0.91, trend: "up" },
   ]
 
-  const getProductSpecificWeatherAnalysis = (productId: string) => {
+  const getProductSpecificSeasonalAnalysis = (productId: string) => {
     switch (productId) {
       case "ice-cream":
-        return "Ice cream demand increases significantly with temperature. Hot days (85°F+) show 40-60% higher sales."
+        return "Ice cream shows strong seasonal patterns with 300% higher demand in summer months (Jun-Aug). Winter months see significant drops, requiring proactive inventory management."
       case "umbrella":
-        return "Umbrella sales spike dramatically during rainy weather. Demand can increase by 300-500% on rainy days."
+        return "Umbrella demand is highly seasonal and weather-dependent. Spring (Mar-May) and fall (Sep-Nov) show peak demand during rainy seasons."
       case "soup-cans":
-        return "Soup demand increases during cold and rainy weather. Temperature drops below 60°F show 25-40% higher sales."
+        return "Soup demand peaks during cold months (Oct-Feb) with 250% higher sales. Summer months require careful inventory reduction to prevent overstock."
       case "coffee-beans":
-        return "Coffee demand remains steady regardless of weather, with slight increases during cold mornings."
-      case "bananas":
+        return "Coffee shows moderate seasonality with higher demand in winter months. Holiday seasons (Nov-Dec) show 40% increase in premium coffee sales."
       case "apples-red":
-      case "tomatoes":
-      case "lettuce-romaine":
-        return "Fresh produce demand is moderately affected by weather. Hot weather may reduce shelf life and increase turnover."
+        return "Apple demand follows harvest cycles with peak demand in fall (Sep-Nov). Spring months show lower demand as stored apples lose freshness appeal."
+      case "salmon-fillet":
+        return "Salmon shows holiday seasonality with peaks during Thanksgiving and New Year. Summer grilling season also drives demand increases."
       default:
-        return "Weather has moderate impact on this product. Seasonal patterns and special weather events may affect demand."
+        return "This product shows moderate seasonal variation. Understanding these patterns helps optimize inventory levels and prevent both stockouts and overstock situations."
     }
   }
 
@@ -268,6 +408,12 @@ export function ProductHeatmap({ productId }: { productId: string }) {
     })
   }
 
+  const formatNumber = (num: number) => {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`
+    return num.toString()
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -275,7 +421,7 @@ export function ProductHeatmap({ productId }: { productId: string }) {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Clock className="w-5 h-5" />
-              Demand Heatmap - Weekly Pattern (24-Hour Format)
+              Product Analytics - {getProductName(productId)}
             </CardTitle>
             <Button variant="outline" size="sm">
               <RefreshCw className="w-4 h-4 mr-2" />
@@ -285,9 +431,10 @@ export function ProductHeatmap({ productId }: { productId: string }) {
         </CardHeader>
         <CardContent>
           <Tabs value={selectedView} onValueChange={setSelectedView}>
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="weekly">Weekly View</TabsTrigger>
-              <TabsTrigger value="weather">Weather Impact</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="weekly">Weekly Pattern</TabsTrigger>
+              <TabsTrigger value="seasonal">Seasonal Analysis</TabsTrigger>
+              <TabsTrigger value="sale-suggestions">Sale Suggestions</TabsTrigger>
               <TabsTrigger value="sentiment">Social Sentiment</TabsTrigger>
             </TabsList>
 
@@ -378,40 +525,290 @@ export function ProductHeatmap({ productId }: { productId: string }) {
               )}
             </TabsContent>
 
-            <TabsContent value="weather" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {weatherData.map((weather, index) => (
-                  <Card key={index} className="border-2">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium">{weather.day}</span>
-                        <Cloud className="w-4 h-4 text-gray-500" />
+            <TabsContent value="seasonal" className="space-y-6">
+              {/* Seasonal Heatmap */}
+              <div className="bg-white p-6 rounded-lg border">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  Monthly Demand Pattern
+                </h3>
+
+                <div className="grid grid-cols-12 gap-2 mb-4">
+                  {seasonalData.map((monthData, index) => (
+                    <div
+                      key={monthData.month}
+                      className={`h-20 ${getSeasonalIntensityColor(monthData.value)} border border-white rounded-lg transition-transform hover:scale-105 cursor-pointer relative group`}
+                      onMouseEnter={() => setHoveredMonth(index)}
+                      onMouseLeave={() => setHoveredMonth(null)}
+                      title={`${monthData.month} - ${getIntensityLabel(monthData.value)} demand`}
+                    >
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-xs font-medium">
+                        <div>{monthData.month}</div>
+                        <div>{(monthData.value * 100).toFixed(0)}%</div>
                       </div>
-                      <div className="space-y-2">
-                        <div className="text-2xl font-bold text-blue-600">{weather.temp}°F</div>
-                        <div className="text-sm text-gray-600">{weather.condition}</div>
-                        <Badge
-                          className={
-                            weather.impact === "Very High"
-                              ? "bg-red-100 text-red-800"
-                              : weather.impact === "High"
-                                ? "bg-orange-100 text-orange-800"
-                                : weather.impact === "Medium"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-green-100 text-green-800"
-                          }
-                        >
-                          {weather.impact} Impact
-                        </Badge>
+
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 whitespace-nowrap">
+                        <div className="font-medium">{monthData.month}</div>
+                        <div>Demand: {getIntensityLabel(monthData.value)}</div>
+                        <div>Sales: {formatNumber(monthData.sales)}</div>
+                        <div>Revenue: ${formatNumber(monthData.revenue)}</div>
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Seasonal Legend */}
+                <div className="flex items-center justify-center gap-4 mb-6">
+                  <span className="text-sm font-medium">Seasonal Demand:</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-gray-200 border"></div>
+                    <span className="text-xs">Very Low</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-green-400 border"></div>
+                    <span className="text-xs">Low</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-yellow-400 border"></div>
+                    <span className="text-xs">Medium</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-red-400 border"></div>
+                    <span className="text-xs">High</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-red-500 border"></div>
+                    <span className="text-xs">Very High</span>
+                  </div>
+                </div>
+
+                {hoveredMonth !== null && (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm">
+                      <strong>{seasonalData[hoveredMonth].month}</strong> -{" "}
+                      {getIntensityLabel(seasonalData[hoveredMonth].value)} demand (
+                      {(seasonalData[hoveredMonth].value * 100).toFixed(0)}%) •
+                      {formatNumber(seasonalData[hoveredMonth].sales)} sales • $
+                      {formatNumber(seasonalData[hoveredMonth].revenue)} revenue
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Seasonal Analysis */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="border-2 border-green-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingDown className="w-4 h-4 text-green-600" />
+                      <span className="font-medium text-green-800">Peak Season</span>
+                    </div>
+                    <div className="text-2xl font-bold text-green-600 mb-1">
+                      {seasonalData.reduce((max, current) => (current.value > max.value ? current : max)).month}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {(
+                        seasonalData.reduce((max, current) => (current.value > max.value ? current : max)).value * 100
+                      ).toFixed(0)}
+                      % demand intensity
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-2 border-red-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="w-4 h-4 text-red-600" />
+                      <span className="font-medium text-red-800">Low Season</span>
+                    </div>
+                    <div className="text-2xl font-bold text-red-600 mb-1">
+                      {seasonalData.reduce((min, current) => (current.value < min.value ? current : min)).month}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {(
+                        seasonalData.reduce((min, current) => (current.value < min.value ? current : min)).value * 100
+                      ).toFixed(0)}
+                      % demand intensity
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-2 border-blue-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Calendar className="w-4 h-4 text-blue-600" />
+                      <span className="font-medium text-blue-800">Seasonality</span>
+                    </div>
+                    <div className="text-2xl font-bold text-blue-600 mb-1">
+                      {(
+                        (Math.max(...seasonalData.map((d) => d.value)) -
+                          Math.min(...seasonalData.map((d) => d.value))) *
+                        100
+                      ).toFixed(0)}
+                      %
+                    </div>
+                    <div className="text-sm text-gray-600">Variation range</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                <h4 className="font-medium mb-2 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Seasonal Impact Analysis
+                </h4>
+                <p className="text-sm text-gray-700">{getProductSpecificSeasonalAnalysis(productId)}</p>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="sale-suggestions" className="space-y-6">
+              <Card className="border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-red-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-orange-800">
+                    <Percent className="w-5 h-5" />
+                    AI-Powered Sale Recommendation
+                    <Badge className="bg-orange-100 text-orange-800 border-orange-200">
+                      {saleSuggestion.aiConfidence}% Confidence
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Alert Banner */}
+                  <div className={`p-4 rounded-lg border-2 ${getRiskColor(saleSuggestion.overstockRisk)}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="w-5 h-5" />
+                      <span className="font-semibold">{saleSuggestion.overstockRisk} Overstock Risk Detected</span>
+                    </div>
+                    <p className="text-sm">{saleSuggestion.reason}</p>
+                  </div>
+
+                  {/* Key Metrics */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card className="border border-gray-200">
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold text-blue-600 mb-1">{saleSuggestion.currentStock}</div>
+                        <div className="text-sm text-gray-600">Current Stock</div>
+                      </CardContent>
+                    </Card>
+                    <Card className="border border-gray-200">
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold text-green-600 mb-1">{saleSuggestion.optimalStock}</div>
+                        <div className="text-sm text-gray-600">Optimal Stock</div>
+                      </CardContent>
+                    </Card>
+                    <Card className="border border-gray-200">
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold text-red-600 mb-1">
+                          {saleSuggestion.currentStock - saleSuggestion.optimalStock}
+                        </div>
+                        <div className="text-sm text-gray-600">Excess Units</div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* AI Recommendation */}
+                  <Card className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
+                    <CardHeader>
+                      <CardTitle className="text-purple-800 flex items-center gap-2">
+                        <Percent className="w-5 h-5" />
+                        Recommended Action Plan
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <h4 className="font-semibold text-purple-800 mb-2">Discount Strategy</h4>
+                          <div className="text-3xl font-bold text-purple-600 mb-2">
+                            {saleSuggestion.suggestedDiscount}% OFF
+                          </div>
+                          <p className="text-sm text-gray-600">Optimal discount to clear excess inventory</p>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-purple-800 mb-2">Implementation Timeline</h4>
+                          <div className="text-3xl font-bold text-purple-600 mb-2">{saleSuggestion.timeframe}</div>
+                          <p className="text-sm text-gray-600">Recommended sale duration</p>
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-white rounded-lg border border-purple-200">
+                        <h4 className="font-semibold text-purple-800 mb-2">Marketing Strategy</h4>
+                        <p className="text-sm text-gray-700">{saleSuggestion.strategy}</p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                          <h5 className="font-medium text-green-800 mb-1">Expected Outcome</h5>
+                          <p className="text-sm text-green-700">
+                            Reduce inventory by{" "}
+                            {(
+                              ((saleSuggestion.currentStock - saleSuggestion.optimalStock) /
+                                saleSuggestion.currentStock) *
+                              100
+                            ).toFixed(0)}
+                            % within {saleSuggestion.timeframe}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <h5 className="font-medium text-blue-800 mb-1">Revenue Impact</h5>
+                          <p className="text-sm text-blue-700">
+                            Estimated revenue: $
+                            {(
+                              (saleSuggestion.currentStock - saleSuggestion.optimalStock) *
+                              15 *
+                              (1 - saleSuggestion.suggestedDiscount / 100)
+                            ).toFixed(0)}
+                          </p>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
-                ))}
-              </div>
-              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <h4 className="font-medium mb-2">Weather Impact Analysis</h4>
-                <p className="text-sm text-gray-700">{getProductSpecificWeatherAnalysis(productId)}</p>
-              </div>
+
+                  {/* Implementation Checklist */}
+                  <Card className="border border-gray-200">
+                    <CardHeader>
+                      <CardTitle className="text-gray-800">Implementation Checklist</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                          </div>
+                          <span className="text-sm">
+                            Update pricing system with {saleSuggestion.suggestedDiscount}% discount
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                          </div>
+                          <span className="text-sm">Create promotional signage and marketing materials</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                          </div>
+                          <span className="text-sm">Implement bundling strategy as suggested</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                          </div>
+                          <span className="text-sm">Monitor daily sales performance</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                          </div>
+                          <span className="text-sm">Adjust strategy if needed after 3 days</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="sentiment" className="space-y-4">
