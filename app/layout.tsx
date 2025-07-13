@@ -3,8 +3,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Supply Demand Chain Management',
-  description: 'Created with v0',
-  generator: 'v0.dev',
+  description: 'Created by Code Wizards',
 }
 
 export default function RootLayout({

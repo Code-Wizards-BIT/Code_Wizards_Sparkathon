@@ -297,7 +297,7 @@ export function AIInsights({ data, categoryStats }: AIInsightsProps) {
   }
 
   return (
-    <Card className="bg-gradient-to-br from-gray-800/60 to-gray-900/60 border-gray-700/50 backdrop-blur-sm">
+    <Card className="bg-gradient-to-br from-800/60 to-gray-900/60 border-black-700/50 backdrop-blur-sm">
       <CardHeader>
         <div className="flex items-center justify-between flex-wrap gap-4">
           <CardTitle className="flex items-center gap-2 text-white">

@@ -54,7 +54,14 @@ export function Footer() {
                 <h4 className="font-semibold text-lg">{member.name}</h4>
                 <p className="text-gray-400 mb-2">{member.role}</p>
                 <Button variant="ghost" size="sm" className="text-gray-300 hover:text-black">
+                  <a
+                    href={`https://github.com/${member.github}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center"
+                  >
                   <Github className="w-4 h-4 mr-2" />@{member.github}
+                  </a>
                 </Button>
               </div>
             ))}
